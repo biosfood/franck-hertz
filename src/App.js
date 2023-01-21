@@ -1,13 +1,15 @@
 import * as React from 'react';
-import Button from '@mui/material/Button';
+import { Scatter as ChartJS } from 'chart.js/auto'
+import { Scatter }            from 'react-chartjs-2'
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { styled } from '@mui/material/styles';
+
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Grid from '@mui/material/Grid';
-import { Scatter as ChartJS } from 'chart.js/auto'
-import { Scatter }            from 'react-chartjs-2'
+import Stack from '@mui/material/Stack';
+import Slider from '@mui/material/Slider';
 
 const totalU = 12;
 const length = 10;
@@ -48,16 +50,23 @@ const xs = linspace(0, length, 100);
 
 const intensityData = xs.map(x => {return {x: x, y: render(x)}});
 
+
+
 function App() {
+  var [voltage, setVoltage] = React.useState(0)
+  function onVoltageChange(event, newVoltage) {
+    console.log(setVoltage)
+    setVoltage(event.target.value)
+  }
+  const voltageSelector = <Item><h3>Spannung: {voltage}V</h3><Slider value={voltage} onChange={onVoltageChange} min={0} max={20}/></Item>
+
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <main>
         <Box sx={{ flexGrow: 1 }}>
           <Grid container spacing={2}>
-            <Grid item xs={2}>
-              <Item>Hello</Item>
-            </Grid>
+            <Grid item xs={2}>{voltageSelector}</Grid>
             <Grid item xs = {10}>
               <Item><Scatter
                 options={{
