@@ -62,7 +62,7 @@ function App() {
               <Item><Scatter
                 options={{
                   type: "scatter",
-                  events: [click],
+                  tooltips: {enabled: false},
                   plugins: {legend: {labels: {filter: function(item, chart) {return item.text != "none"}}}}
                 }}
                 data={{
