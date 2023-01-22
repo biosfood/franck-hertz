@@ -11,7 +11,6 @@ import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Slider from '@mui/material/Slider';
 
-const totalU = 12;
 const length = 10;
 
 const darkTheme = createTheme({
@@ -21,21 +20,22 @@ const darkTheme = createTheme({
 });
 
 const Item = styled(Paper)(({ theme }) => ({
-  backgroundColor: theme.palette.mode === 'dark' ? '#1A2027' : '#fff',
+  backgroundColor: '#1A2027',
   ...theme.typography.body2,
   padding: theme.spacing(1),
   textAlign: 'center',
   color: theme.palette.text.secondary,
 }));
 
-function render(x) {
-  var U = totalU * x / length;
-  if (U <= 4.9) {
-    return 0;
+function render(x, voltage) {
+  var intensity = 0
+  var U = voltage * x / length;
+  while (U >= 4.9) {
+    U -= 4.9;
+    const distance = U * length / voltage;
+    intensity = (1-intensity) * Math.exp(-distance)
   }
-  U -= 4.9;
-  const distance = U * length / totalU;
-  return Math.exp(-distance);
+  return intensity;
 }
 
 function linspace(min, max, count) {
@@ -46,19 +46,34 @@ function linspace(min, max, count) {
   return result;
 }
 
-const xs = linspace(0, length, 100);
-
-const intensityData = xs.map(x => {return {x: x, y: render(x)}});
-
-
 
 function App() {
-  var [voltage, setVoltage] = React.useState(0)
+  var [voltage, setVoltage] = React.useState(10)
   function onVoltageChange(event, newVoltage) {
     console.log(setVoltage)
     setVoltage(event.target.value)
+    onUpdate()
   }
-  const voltageSelector = <Item><h3>Spannung: {voltage}V</h3><Slider value={voltage} onChange={onVoltageChange} min={0} max={20}/></Item>
+  const voltageSelector = <Item>
+    <h3>Spannung: {voltage}V</h3>
+    <Slider value={voltage} onChange={onVoltageChange} min={0} max={20}/>
+  </Item>
+
+  const xs = linspace(0, length, 100);
+  const [intensityData, setIntensity] = React.useState(xs.map(x => {return {x: x, y: render(x, voltage)}}));
+  var data = {datasets: [
+                    {type: "scatter", label: "none", data: [{x: 0, y: 0}]},
+                    {type: "line", label: "light intensity",data: intensityData},
+                ]}
+  
+  const scatterPlot = <Scatter
+    options={{type: "scatter", tooltips: {enabled: false},
+              plugins: {legend: {labels: {filter: function(item, chart) {return item.text != "none"}}}}}}
+              data={data}/>
+  
+  function onUpdate() {
+    setIntensity(xs.map(x => {return {x: x, y: render(x, voltage)}}))
+  }
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -67,19 +82,7 @@ function App() {
         <Box sx={{ flexGrow: 1 }}>
           <Grid container spacing={2}>
             <Grid item xs={2}>{voltageSelector}</Grid>
-            <Grid item xs = {10}>
-              <Item><Scatter
-                options={{
-                  type: "scatter",
-                  tooltips: {enabled: false},
-                  plugins: {legend: {labels: {filter: function(item, chart) {return item.text != "none"}}}}
-                }}
-                data={{
-                  datasets: [
-                    {type: "scatter", label: "none", data: [{x: 0, y: 0}]},
-                    {type: "line", label: "light intensity",data: intensityData},
-                ]}}/></Item>
-            </Grid>
+            <Grid item xs = {10}><Item>{scatterPlot}</Item></Grid>
           </Grid>
         </Box>
       </main>
