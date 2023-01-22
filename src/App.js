@@ -27,13 +27,20 @@ const Item = styled(Paper)(({ theme }) => ({
   color: theme.palette.text.secondary,
 }));
 
-function render(x, voltage) {
+const R = 8.31446261815324 / 6.02214076e23 // R / 1mol
+const pressure = 0.1
+const r = 1e-10
+const sigma = Math.PI * Math.pow(2*r, 2)
+
+function render(x, voltage, temperature) {
+  const rho = pressure / (R * temperature)
   var intensity = 0
   var U = voltage * x / length;
+  console.log(sigma*rho)
   while (U >= 4.9) {
     U -= 4.9;
     const distance = U * length / voltage;
-    intensity = (1-intensity) * Math.exp(-distance)
+    intensity += (1-intensity / sigma / rho) * sigma * rho * Math.exp(-distance*sigma*rho)
   }
   return intensity;
 }
@@ -46,21 +53,28 @@ function linspace(min, max, count) {
   return result;
 }
 
-
-function App() {
-  var [voltage, setVoltage] = React.useState(10)
-  function onVoltageChange(event, newVoltage) {
-    console.log(setVoltage)
-    setVoltage(event.target.value)
+function CreateSelector(text, unit, initialValue, min, max, onUpdate) {
+  var [variable, setter] = React.useState(initialValue)
+  function onChange(event, _) {
+    setter(event.target.value)
     onUpdate()
   }
-  const voltageSelector = <Item>
-    <h3>Spannung: {voltage}V</h3>
-    <Slider value={voltage} onChange={onVoltageChange} min={0} max={20}/>
+  const selector = <Item>
+    <h3>{text}: {variable}{unit}</h3>
+    <Slider value={variable} onChange={onChange} min={min} max={max}/>
   </Item>
+  return [variable, setter, selector]
+}
 
-  const xs = linspace(0, length, 100);
-  const [intensityData, setIntensity] = React.useState(xs.map(x => {return {x: x, y: render(x, voltage)}}));
+const xs = linspace(0, length, 100)
+const initialVoltage = 10
+const initialTemperature = 280
+
+function App() {
+  const [intensityData, setIntensity] = React.useState(xs.map(x => {return {x: x, y: render(x, initialVoltage, initialTemperature)}}));
+  function onUpdate() {
+    setIntensity(xs.map(x => {return {x: x, y: render(x, voltage, temperature)}}))
+  }
   var data = {datasets: [
                     {type: "scatter", label: "none", data: [{x: 0, y: 0}]},
                     {type: "line", label: "light intensity",data: intensityData},
@@ -71,9 +85,9 @@ function App() {
               plugins: {legend: {labels: {filter: function(item, chart) {return item.text != "none"}}}}}}
               data={data}/>
   
-  function onUpdate() {
-    setIntensity(xs.map(x => {return {x: x, y: render(x, voltage)}}))
-  }
+
+  var [voltage, setVoltage, voltageSelector] = CreateSelector("Spannung", "V", initialVoltage, 0, 20, onUpdate)
+  var [temperature, setTemperature, temperatureSelector] = CreateSelector("Temperatur", "K", initialTemperature, 273, 313, onUpdate)
 
   return (
     <ThemeProvider theme={darkTheme}>
@@ -81,8 +95,11 @@ function App() {
       <main>
         <Box sx={{ flexGrow: 1 }}>
           <Grid container spacing={2}>
-            <Grid item xs={2}>{voltageSelector}</Grid>
-            <Grid item xs = {10}><Item>{scatterPlot}</Item></Grid>
+            <Grid container direction="column" item xs={2} spacing={2}>
+              <Grid item>{temperatureSelector}</Grid>
+              <Grid item>{voltageSelector}</Grid>
+            </Grid>
+            <Grid item xs={10} ys={4}><Item>{scatterPlot}</Item></Grid>
           </Grid>
         </Box>
       </main>
